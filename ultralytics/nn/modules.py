@@ -39,6 +39,26 @@ class Conv(nn.Module):
         """Perform transposed convolution of 2D data."""
         return self.act(self.conv(x))
 
+class DWSConv(nn.Module):
+    # Depth-wise separable convolution with args(ch_in, ch_out, kernel, stride, padding, dilation, activation)
+    default_act = nn.SiLU()  # default activation
+    
+    def __init__(self, c1, c2, k=1, s=1, p=None, d=1, act=True):
+        super().__init__()
+        # depthwise layer with c2=c1
+        self.depthwise = nn.Conv2d(c1, c1, k, groups=c1, bias=False)
+        # pointwise layer with k=1
+        self.pointwise = nn.Conv2d(c1, c2, 1, s, padding=autopad(k, p, d), bias=False)
+        self.bn = nn.BatchNorm2d(c2)
+        self.act = self.default_act if act is True else act if isinstance(act, nn.Module) else nn.Identity()
+
+    def forward(self, x):
+        """Applies a depthwise conv followed by pointwise convolution and a batch normalization and an activation function to the input tensor `x`."""
+        x=self.depthwise(x)
+        x=self.pointwise(x)
+        x=self.bn(x)
+        x=self.act(x)
+        return x
 
 class DWConv(Conv):
     """Depth-wise convolution."""
